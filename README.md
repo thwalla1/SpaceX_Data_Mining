@@ -1,2 +1,5 @@
 # SpaceX_Data_Mining
-CMSC491 Data Mining Group Project Collab
+Authors:
+
+Description:
+CMSC 491 Data Mining Group Project Collab
