@@ -1,5 +1,11 @@
-# SpaceX_Data_Mining
+# SpaceX Data Mining
+====================
 Authors:
 
-Description:
-CMSC 491 Data Mining Group Project Collab
+
+Description
+-----------
+Repository for group collaboration
+
+File Descriptions
+-----------------
