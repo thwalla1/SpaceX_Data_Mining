@@ -3,6 +3,7 @@
 Authors:
 * Victor Wu
 * Thomas Wallace
+* (Sam)TsunSing Leung
 
 Description
 -----------
