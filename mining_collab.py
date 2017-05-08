@@ -29,30 +29,97 @@ def removeUnicode(text):
 
 #getDiversity - Returns Lexical Diversity
 def getDiversity(text):
-	words = text.split()
-	return 1.0 * len(set(words))/len(words)
+  words = text.split()
+  return 1.0 * len(set(words))/len(words)
 
 #getSentiment - Returns text Sentiment
 def getSentiment(text):
-	vs = vaderSentiment(text.encode("utf-8"))
-	return vs["compound"]
+  vs = vaderSentiment(text.encode("utf-8"))
+  return vs["compound"]
 
-#=TWITTER MINING FUNCTIONS===============================================
+#printSummary - Prints Three Sentence Summary
+def printSummary(unicode_text,soup_paras):
 
+	#Initialize Russell
+	fileObj = codecs.open("russel.rtf","w","UTF")
+
+	#Write Paragraphs to Object
+	for para in soup_paras:
+		fileObj.write(para.text)
+
+	#Summarize Paragraph Text
+	summary = Russell.summarize(unicode_text)
+	print "\nThree Sentence Article Summary:"
+	for sent in summary['top_n_summary']:
+		print removeUnicode(sent)
+
+	return
+	
+#printTFIDF - Prints TF/IDF Score
+def printTFIDF(unicode_text,query):
+
+	#Tokenize Text into Sentences
+	ascii_text = removeUnicode(unicode_text)
+	sentences = nltk.tokenize.sent_tokenize(ascii_text)
+	sentlist = [sent.lower().split() for sent in sentences]
+	tc = nltk.TextCollection(sentences)
+
+	#Calculate and Print TF/IDF
+	print "\nArticle Query TF/IDF:"
+	for sentnum in range(len(sentlist)):
+		tfidf = 0
+		for term in [t.lower() for t in query]:
+			tfidf = tfidf + tc.tf_idf(term, sentlist[sentnum])
+		if tfidf > 0:
+			print "TF/IDF score %s for this sentence" % tfidf
+			print ''.join(sentlist[sentnum])
+			print
+			
+	return
+
+#printBigrams - Prints Bigrams from given text
+def printBigrams(unicode_text):
+
+	#Tokenize Text into Word List
+	words = nltk.tokenize.word_tokenize(unicode_text)
+	wordlist = []
+	for word in words:
+		word = word.lower()
+		if word not in STOPWORDS:
+			wordlist.append(word)
+	
+	#Collect Collocations and Filter
+	collocs = nltk.BigramCollocationFinder.from_words(wordlist)
+	collocs.apply_freq_filter(2)
+	collocs.apply_word_filter(lambda skips: skips in nltk.corpus.stopwords.words('English'))
+
+	#Parse Collocs for Bigrams
+	jaccard = BigramAssocMeasures.jaccard
+	bigrams = collocs.nbest(jaccard,10)
+
+	#Summarize Bigrams
+	print "\nArticle Bigram List:"
+	for bigram in bigrams:
+		print str(bigram[0]).encode('utf-8')," ",str(bigram[1]).encode('utf-8')
+
+	return
+	
+#=TWITTER MINING FUNCTIONS===============================================	
+	
 #twAnalyze - Prints analysis of given tweet
 def twAnalyze(tweet):
 	user = tweet["user"]["screen_name"]
 	text = removeUnicode(tweet["text"])
 	retweets = tweet["retweet_count"]
-	sentiment = getSentiment(text)
-	diversity = getDiversity(text)
+	sentiment = twGetSentiment(text)
+	diversity = twGetDiversity(text)
 	out = "user:\t{}\ntweet:\t{}\nretweets: {}, sentiment: {}, lexical diversity: {}\n"
 	print(out.format(user, text, retweets, sentiment, diversity))
 	return retweets, sentiment, diversity
 
 #getTweets - Retrieves n tweets from Twitter
 def getTweets(tw, query, n):
-	return  tw.search.tweets(q = query, count = n, lang = "en")
+  return  tw.search.tweets(q = query, count = n, lang = "en")
 
 #connTwitter - Returns Twitter connection
 def connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET):
@@ -63,7 +130,7 @@ def connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET):
 #mineTwitter - Performs batch mining and analysis
 def mineTwitter(twConn,twAt,twCount):
 
-	#Retrieve First Tweet Batch
+  #Retrieve First Tweet Batch
 	tweets = getTweets(twConn,twAt,twCount)
 	batch1_retweets = []
 	batch1_sentiment = []
@@ -76,7 +143,7 @@ def mineTwitter(twConn,twAt,twCount):
 		batch1_sentiment.append(sentiment)
 		batch1_diversity.append(diversity)
 
-	#Retrieve Second Tweet Batch
+  #Retrieve Second Tweet Batch
 	tweets = getTweets(twConn,twAt,twCount)
 	batch2_retweets = []
 	batch2_sentiment = []
@@ -120,11 +187,10 @@ def mineFacebook(fbConn,fbPage,fbCount):
 #=WEBSITE MINING FUNCTIONS===============================================
 
 #mineWebsite - Retrieves page HTML and performs page analysis
-def mineWebsite(url,depth):
+def mineWebsite(url,query):
 
 	#Retrieve HTML and Setup Russell
 	html = requests.get(url)
-	fileObj = codecs.open("russel.rtf","w","UTF")
 	print "Latest News Article: " + str(url)
 
 	#Build DOM and List Paragraphs
@@ -134,37 +200,16 @@ def mineWebsite(url,depth):
 	#Parse HTML Paragraphs
 	unicode_text = ""
 	for para in paras:
-		fileObj.write(para.text)
 		unicode_text = unicode_text + para.text
 
-	#Summarize Paragraph Text
-	summary = Russell.summarize(unicode_text)
-	print "\nThree Sentence Article Summary:"
-	for sent in summary['top_n_summary']:
-		print removeUnicode(sent)
-
-	#Tokenize Paragraph Text and Remove Stop Words
-	ascii_text = removeUnicode(unicode_text)
-	tokens = nltk.tokenize.word_tokenize(ascii_text)
-	wordlist = []
-	for word in tokens:
-		word = word.lower()
-		if word not in STOPWORDS:
-			wordlist.append(word)
-
-	#Collect Collocations and Filter
-	collocs = nltk.BigramCollocationFinder.from_words(wordlist)
-	collocs.apply_freq_filter(2)
-	collocs.apply_word_filter(lambda skips: skips in nltk.corpus.stopwords.words('English'))
-
-	#Parse Collocs for Bigrams
-	jaccard = BigramAssocMeasures.jaccard
-	bigrams = collocs.nbest(jaccard,10)
-
-	#Summarize Bigrams
-	print "\nArticle Bigram List:"
-	for bigram in bigrams:
-		print str(bigram[0]).encode('utf-8')," ",str(bigram[1]).encode('utf-8')
+	#Print Paragraph Summary
+	printSummary(unicode_text,paras)
+		
+	#Print Query TF/IDF
+	printTFIDF(unicode_text,query)
+	
+	#Print Article Bigrams
+	printBigrams(unicode_text)
 	
 	return
 
@@ -172,7 +217,7 @@ def mineWebsite(url,depth):
 
 def main():
 
-	#Twitter Access Credential Declaration
+  #Twitter Access Credential Declaration
 	twOA_TOKEN = ''
 	twOA_SECRET = ''
 	twCONSUMER_KEY = ''
@@ -190,7 +235,7 @@ def main():
 	fbPage = ""
 	fbCount = 0
 	url = "http://www.spacex.com/news/2017/03/16/echostar-xxiii-mission"
-	depth = 0
+	query = ["falcon","dragon"]
 
 	#Establish Connection to Twitter and Mine
 	twConn = connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET)
@@ -200,7 +245,7 @@ def main():
 	fbConn = connFacebook(fbOA_TOKEN,fbOA_SECRET,fbCONSUMER_KEY,fbCONSUMER_SECRET)
 	mineFacebook(fbConn,fbPage,fbCount)
 
-	#Retrieve Webpage HTML and Parse
-	mineWebsite(url,depth)
+	#Retrieve Webpage HTML and Analyze
+	mineWebsite(url,query)
 
 main()
