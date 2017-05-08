@@ -27,32 +27,32 @@ def removeUnicode(text):
 
 	return asciiText
 
+#getDiversity - Returns Lexical Diversity
+def getDiversity(text):
+	words = text.split()
+	return 1.0 * len(set(words))/len(words)
+
+#getSentiment - Returns text Sentiment
+def getSentiment(text):
+	vs = vaderSentiment(text.encode("utf-8"))
+	return vs["compound"]
+
 #=TWITTER MINING FUNCTIONS===============================================
-
-#twGetDiversity - Returns Lexical Diversity
-def twGetDiversity(text):
-  words = text.split()
-  return 1.0 * len(set(words))/len(words)
-
-#twGetSentiment - Returns text Sentiment
-def twGetSentiment(text):
-  vs = vaderSentiment(text.encode("utf-8"))
-  return vs["compound"]
 
 #twAnalyze - Prints analysis of given tweet
 def twAnalyze(tweet):
 	user = tweet["user"]["screen_name"]
 	text = removeUnicode(tweet["text"])
 	retweets = tweet["retweet_count"]
-	sentiment = twGetSentiment(text)
-	diversity = twGetDiversity(text)
+	sentiment = getSentiment(text)
+	diversity = getDiversity(text)
 	out = "user:\t{}\ntweet:\t{}\nretweets: {}, sentiment: {}, lexical diversity: {}\n"
 	print(out.format(user, text, retweets, sentiment, diversity))
 	return retweets, sentiment, diversity
 
 #getTweets - Retrieves n tweets from Twitter
 def getTweets(tw, query, n):
-  return  tw.search.tweets(q = query, count = n, lang = "en")
+	return  tw.search.tweets(q = query, count = n, lang = "en")
 
 #connTwitter - Returns Twitter connection
 def connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET):
@@ -63,7 +63,7 @@ def connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET):
 #mineTwitter - Performs batch mining and analysis
 def mineTwitter(twConn,twAt,twCount):
 
-  #Retrieve First Tweet Batch
+	#Retrieve First Tweet Batch
 	tweets = getTweets(twConn,twAt,twCount)
 	batch1_retweets = []
 	batch1_sentiment = []
@@ -76,7 +76,7 @@ def mineTwitter(twConn,twAt,twCount):
 		batch1_sentiment.append(sentiment)
 		batch1_diversity.append(diversity)
 
-  #Retrieve Second Tweet Batch
+	#Retrieve Second Tweet Batch
 	tweets = getTweets(twConn,twAt,twCount)
 	batch2_retweets = []
 	batch2_sentiment = []
@@ -172,7 +172,7 @@ def mineWebsite(url,depth):
 
 def main():
 
-  #Twitter Access Credential Declaration
+	#Twitter Access Credential Declaration
 	twOA_TOKEN = ''
 	twOA_SECRET = ''
 	twCONSUMER_KEY = ''
