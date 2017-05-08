@@ -111,15 +111,12 @@ def twAnalyze(tweet):
 	user = tweet["user"]["screen_name"]
 	text = removeUnicode(tweet["text"])
 	retweets = tweet["retweet_count"]
-	sentiment = twGetSentiment(text)
-	diversity = twGetDiversity(text)
+	sentiment = getSentiment(text)
+	diversity = getDiversity(text)
 	out = "user:\t{}\ntweet:\t{}\nretweets: {}, sentiment: {}, lexical diversity: {}\n"
 	print(out.format(user, text, retweets, sentiment, diversity))
 	return retweets, sentiment, diversity
 
-#getTweets - Retrieves n tweets from Twitter
-def getTweets(tw, query, n):
-  return  tw.search.tweets(q = query, count = n, lang = "en")
 
 #connTwitter - Returns Twitter connection
 def connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET):
@@ -130,48 +127,51 @@ def connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET):
 #mineTwitter - Performs batch mining and analysis
 def mineTwitter(twConn,twAt,twCount):
 
-  #Retrieve First Tweet Batch
-	tweets = getTweets(twConn,twAt,twCount)
-	batch1_retweets = []
-	batch1_sentiment = []
-	batch1_diversity = []
+    #Retrieve First Tweet Batch
+    tweets = twConn.search.tweets(q = twAt, count = twCount, lang = "en")
+    batch1_retweets = []
+    batch1_sentiment = []
+    batch1_diversity = []
+    
+    print("First Tweet Batch")
+    for tweet in tweets["statuses"]:
+        retweets, sentiment, diversity = twAnalyze(tweet)
+        batch1_retweets.append(retweets)
+        batch1_sentiment.append(sentiment)
+        batch1_diversity.append(diversity)
 
-	print("First Tweet Batch")
-	for tweet in tweets["statuses"]:
-		retweets, sentiment, diversity = twAnalyze(tweet)
-		batch1_retweets.append(retweets)
-		batch1_sentiment.append(sentiment)
-		batch1_diversity.append(diversity)
 
-  #Retrieve Second Tweet Batch
-	tweets = getTweets(twConn,twAt,twCount)
-	batch2_retweets = []
-	batch2_sentiment = []
-	batch2_diversity = []
+    #Retrieve Second Tweet Batch
+    nextSet = tweets["search_metadata"]["next_results"]
+    nextMaxID = nextSet.split("max_id=")[1].split("&")[0]
+    tweets = twConn.search.tweets(q = twAt, count = twCount, lang = "en", maxid = nextMaxID)
+    batch2_retweets = []
+    batch2_sentiment = []
+    batch2_diversity = []
 
-	print("Second Tweet Batch")
-	for tweet in tweets["statuses"]:
-		retweets, sentiment, diversity = twAnalyze(tweet)
-		batch2_retweets.append(retweets)
-		batch2_sentiment.append(sentiment)
-		batch2_diversity.append(diversity)
+    print("Second Tweet Batch")
+    for tweet in tweets["statuses"]:
+        retweets, sentiment, diversity = twAnalyze(tweet)
+        batch2_retweets.append(retweets)
+        batch2_sentiment.append(sentiment)
+        batch2_diversity.append(diversity)
 
 	#Batch Analysis
-	print "First Batch Statistics:"
-	avg_retweets = sum(batch1_retweets)/len(batch1_retweets)
-	avg_sentiment = sum(batch1_sentiment)/len(batch1_sentiment)
-	avg_diversity = sum(batch1_diversity)/len(batch1_diversity)
-	out = "Avg Retweets\t{}\nAvg Sentiment\t{}\nAvg Diversity\t{}\n"
-	print(out.format(avg_retweets,avg_sentiment,avg_diversity))
+    print "First Batch Statistics:"
+    avg_retweets = sum(batch1_retweets)/len(batch1_retweets)
+    avg_sentiment = sum(batch1_sentiment)/len(batch1_sentiment)
+    avg_diversity = sum(batch1_diversity)/len(batch1_diversity)
+    out = "Avg Retweets\t{}\nAvg Sentiment\t{}\nAvg Diversity\t{}\n"
+    print(out.format(avg_retweets,avg_sentiment,avg_diversity))
+    
+    print "Second Batch Statistics:"
+    avg_retweets = sum(batch2_retweets)/len(batch2_retweets)
+    avg_sentiment = sum(batch2_sentiment)/len(batch2_sentiment)
+    avg_diversity = sum(batch2_diversity)/len(batch2_diversity)
+    out = "Avg Retweets\t{}\nAvg Sentiment\t{}\nAvg Diversity\t{}\n"
+    print(out.format(avg_retweets,avg_sentiment,avg_diversity))
 
-	print "Second Batch Statistics:"
-	avg_retweets = sum(batch2_retweets)/len(batch2_retweets)
-	avg_sentiment = sum(batch2_sentiment)/len(batch2_sentiment)
-	avg_diversity = sum(batch2_diversity)/len(batch2_diversity)
-	out = "Avg Retweets\t{}\nAvg Sentiment\t{}\nAvg Diversity\t{}\n"
-	print(out.format(avg_retweets,avg_sentiment,avg_diversity))
-
-	return
+    return
 
 #=FACEBOOK MINING FUNCTIONS===============================================
 
