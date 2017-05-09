@@ -138,7 +138,7 @@ def connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET):
 	return tw
 
 #mineTwitter - Performs batch mining and analysis
-def mineTwitter(twConn,twAt,twCount, query):
+def mineTwitter(twConn,twAt,twCount):
 
     #Retrieve First Tweet Batch
     tweets = twConn.search.tweets(q = twAt, count = twCount, lang = "en")
@@ -148,7 +148,7 @@ def mineTwitter(twConn,twAt,twCount, query):
     tweet_texts=[]
     tweet_words=[]
     tweet_para=''
-	
+    query=['Falcon','launch','science']
     print("First Tweet Batch")
     for tweet in tweets["statuses"]:
         retweets, sentiment, diversity = twAnalyze(tweet)
@@ -168,7 +168,6 @@ def mineTwitter(twConn,twAt,twCount, query):
 
 	#Print TF/IDF count
     printTFIDF(tweet_para,query)
-    print '\n'
 
     #Retrieve Second Tweet Batch
     nextSet = tweets["search_metadata"]["next_results"]
@@ -252,8 +251,8 @@ def main():
 	twCONSUMER_KEY = ''
 	twCONSUMER_SECRET = ''
 
-	Facebook Access Credential Declaration
-	fbOA_TOKEN = ''
+	#Facebook Access Credential Declaration
+	#fbOA_TOKEN = ''
 
 	#Mining Targets Declaration
 	twAt = "@spacex"
@@ -265,11 +264,11 @@ def main():
 
 	#Establish Connection to Twitter and Mine
 	twConn = connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET)
-	mineTwitter(twConn,twAt,twCount,query)
+	mineTwitter(twConn,twAt,twCount)
 
 	#Establish Connection to Facebook and Mine
-	fbConn = connFacebook(fbOA_TOKEN,fbOA_SECRET,fbCONSUMER_KEY,fbCONSUMER_SECRET)
-	mineFacebook(fbConn,fbPage,fbCount)
+	#fbConn = connFacebook(fbOA_TOKEN,fbOA_SECRET,fbCONSUMER_KEY,fbCONSUMER_SECRET)
+	#mineFacebook(fbConn,fbPage,fbCount)
 
 	#Retrieve Webpage HTML and Analyze
 	mineWebsite(url,query)
