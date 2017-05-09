@@ -9,6 +9,8 @@ from nltk import BigramAssocMeasures
 from bs4 import BeautifulSoup
 import twitter
 from vaderSentiment.vaderSentiment import sentiment as vaderSentiment
+from collections import Counter
+from prettytable import PrettyTable
 
 #=CONSTANTS AND COMMON FUNCTIONS=========================================
 
@@ -103,6 +105,17 @@ def printBigrams(unicode_text):
 		print str(bigram[0]).encode('utf-8')," ",str(bigram[1]).encode('utf-8')
 
 	return
+
+#printFrequency - Prints PrettyTable of frequency os given list of words
+def printFrequency(words):
+    cnt=Counter(words)
+    pt=PrettyTable(field_names=['Word','Count'])
+    srtCnt=sorted(cnt.items(), key=lambda pair: pair[1], reverse=True)
+    for kv in srtCnt:
+        pt.add_row(kv)
+
+    print '--Frequency Count--'
+    print pt, '\n'
 	
 #=TWITTER MINING FUNCTIONS===============================================	
 	
@@ -125,21 +138,37 @@ def connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET):
 	return tw
 
 #mineTwitter - Performs batch mining and analysis
-def mineTwitter(twConn,twAt,twCount):
+def mineTwitter(twConn,twAt,twCount, query):
 
     #Retrieve First Tweet Batch
     tweets = twConn.search.tweets(q = twAt, count = twCount, lang = "en")
     batch1_retweets = []
     batch1_sentiment = []
     batch1_diversity = []
-    
+    tweet_texts=[]
+    tweet_words=[]
+    tweet_para=''
+	
     print("First Tweet Batch")
     for tweet in tweets["statuses"]:
         retweets, sentiment, diversity = twAnalyze(tweet)
         batch1_retweets.append(retweets)
         batch1_sentiment.append(sentiment)
         batch1_diversity.append(diversity)
+        tweet_texts.append(removeUnicode(tweet['text']))
+		
+	#Split statuses into a bag of words
+    for text in tweet_texts:
+        tweet_para=tweet_para+text
+        for word in text.split():
+            tweet_words.append(word)
 
+	#Print Frequency count
+    printFrequency(tweet_words)
+
+	#Print TF/IDF count
+    printTFIDF(tweet_para,query)
+    print '\n'
 
     #Retrieve Second Tweet Batch
     nextSet = tweets["search_metadata"]["next_results"]
@@ -223,11 +252,8 @@ def main():
 	twCONSUMER_KEY = ''
 	twCONSUMER_SECRET = ''
 
-	#Facebook Access Credential Declaration
+	Facebook Access Credential Declaration
 	fbOA_TOKEN = ''
-	fbOA_SECRET = ''
-	fbCONSUMER_KEY = ''
-	fbCONSUMER_SECRET = ''
 
 	#Mining Targets Declaration
 	twAt = "@spacex"
@@ -239,7 +265,7 @@ def main():
 
 	#Establish Connection to Twitter and Mine
 	twConn = connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET)
-	mineTwitter(twConn,twAt,twCount)
+	mineTwitter(twConn,twAt,twCount,query)
 
 	#Establish Connection to Facebook and Mine
 	fbConn = connFacebook(fbOA_TOKEN,fbOA_SECRET,fbCONSUMER_KEY,fbCONSUMER_SECRET)
