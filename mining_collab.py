@@ -9,6 +9,7 @@ from nltk import BigramAssocMeasures
 from bs4 import BeautifulSoup
 import twitter
 from vaderSentiment.vaderSentiment import sentiment as vaderSentiment
+import facebook
 from collections import Counter
 from prettytable import PrettyTable
 
@@ -31,13 +32,13 @@ def removeUnicode(text):
 
 #getDiversity - Returns Lexical Diversity
 def getDiversity(text):
-  words = text.split()
-  return 1.0 * len(set(words))/len(words)
+	words = text.split()
+	return 1.0 * len(set(words))/len(words)
 
 #getSentiment - Returns text Sentiment
 def getSentiment(text):
-  vs = vaderSentiment(text.encode("utf-8"))
-  return vs["compound"]
+	vs = vaderSentiment(text.encode("utf-8"))
+	return vs["compound"]
 
 #printSummary - Prints Three Sentence Summary
 def printSummary(unicode_text,soup_paras):
@@ -51,12 +52,12 @@ def printSummary(unicode_text,soup_paras):
 
 	#Summarize Paragraph Text
 	summary = Russell.summarize(unicode_text)
-	print "\nThree Sentence Article Summary:"
+	print "\n--Three Sentence Article Summary--"
 	for sent in summary['top_n_summary']:
 		print removeUnicode(sent)
 
 	return
-	
+
 #printTFIDF - Prints TF/IDF Score
 def printTFIDF(unicode_text,query):
 
@@ -67,29 +68,29 @@ def printTFIDF(unicode_text,query):
 	tc = nltk.TextCollection(sentences)
 
 	#Calculate and Print TF/IDF
-	print "\nArticle Query TF/IDF:"
+	print "\n--Query TF/IDF--"
 	for sentnum in range(len(sentlist)):
 		tfidf = 0
 		for term in [t.lower() for t in query]:
 			tfidf = tfidf + tc.tf_idf(term, sentlist[sentnum])
 		if tfidf > 0:
-			print "TF/IDF score %s for this sentence" % tfidf
+			print "TF/IDF score %s for sentence" % tfidf
 			print ''.join(sentlist[sentnum])
 			print
-			
+
 	return
 
 #printBigrams - Prints Bigrams from given text
 def printBigrams(unicode_text):
 
-	#Tokenize Text into Word List
+#Tokenize Text into Word List
 	words = nltk.tokenize.word_tokenize(unicode_text)
 	wordlist = []
 	for word in words:
 		word = word.lower()
 		if word not in STOPWORDS:
 			wordlist.append(word)
-	
+
 	#Collect Collocations and Filter
 	collocs = nltk.BigramCollocationFinder.from_words(wordlist)
 	collocs.apply_freq_filter(2)
@@ -100,7 +101,7 @@ def printBigrams(unicode_text):
 	bigrams = collocs.nbest(jaccard,10)
 
 	#Summarize Bigrams
-	print "\nArticle Bigram List:"
+	print "\n--Bigram List--"
 	for bigram in bigrams:
 		print str(bigram[0]).encode('utf-8')," ",str(bigram[1]).encode('utf-8')
 
@@ -108,17 +109,18 @@ def printBigrams(unicode_text):
 
 #printFrequency - Prints PrettyTable of frequency os given list of words
 def printFrequency(words):
-    cnt=Counter(words)
-    pt=PrettyTable(field_names=['Word','Count'])
-    srtCnt=sorted(cnt.items(), key=lambda pair: pair[1], reverse=True)
-    for kv in srtCnt:
-        pt.add_row(kv)
 
-    print '--Frequency Count--'
-    print pt, '\n'
-	
-#=TWITTER MINING FUNCTIONS===============================================	
-	
+	cnt=Counter(words)
+	pt=PrettyTable(field_names=['Word','Count'])
+	srtCnt=sorted(cnt.items(), key=lambda pair: pair[1], reverse=True)
+	for kv in srtCnt:
+		pt.add_row(kv)
+
+	print "\n--Frequency Count--"
+	print pt
+
+#=TWITTER MINING FUNCTIONS===============================================
+
 #twAnalyze - Prints analysis of given tweet
 def twAnalyze(tweet):
 	user = tweet["user"]["screen_name"]
@@ -140,76 +142,104 @@ def connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET):
 #mineTwitter - Performs batch mining and analysis
 def mineTwitter(twConn,twAt,twCount):
 
-    #Retrieve First Tweet Batch
-    tweets = twConn.search.tweets(q = twAt, count = twCount, lang = "en")
-    batch1_retweets = []
-    batch1_sentiment = []
-    batch1_diversity = []
-    tweet_texts=[]
-    tweet_words=[]
-    tweet_para=''
-    query=['Falcon','launch','science']
-    print("First Tweet Batch")
-    for tweet in tweets["statuses"]:
-        retweets, sentiment, diversity = twAnalyze(tweet)
-        batch1_retweets.append(retweets)
-        batch1_sentiment.append(sentiment)
-        batch1_diversity.append(diversity)
-        tweet_texts.append(removeUnicode(tweet['text']))
-		
+	#Retrieve First Tweet Batch
+	tweets = twConn.search.tweets(q = twAt, count = twCount, lang = "en")
+	batch1_retweets = []
+	batch1_sentiment = []
+	batch1_diversity = []
+	tweet_texts=[]
+	tweet_words=[]
+	tweet_para=''
+	query=['Falcon','launch','science']
+
+	print("First Tweet Batch")
+	for tweet in tweets["statuses"]:
+		retweets, sentiment, diversity = twAnalyze(tweet)
+		batch1_retweets.append(retweets)
+		batch1_sentiment.append(sentiment)
+		batch1_diversity.append(diversity)
+		tweet_texts.append(removeUnicode(tweet['text']))
+
 	#Split statuses into a bag of words
-    for text in tweet_texts:
-        tweet_para=tweet_para+text
-        for word in text.split():
-            tweet_words.append(word)
+	for text in tweet_texts:
+		tweet_para=tweet_para+text
+		for word in text.split():
+			tweet_words.append(word)
 
 	#Print Frequency count
-    printFrequency(tweet_words)
+	printFrequency(tweet_words)
 
 	#Print TF/IDF count
-    printTFIDF(tweet_para,query)
+	printTFIDF(tweet_para,query)
 
-    #Retrieve Second Tweet Batch
-    nextSet = tweets["search_metadata"]["next_results"]
-    nextMaxID = nextSet.split("max_id=")[1].split("&")[0]
-    tweets = twConn.search.tweets(q = twAt, count = twCount, lang = "en", maxid = nextMaxID)
-    batch2_retweets = []
-    batch2_sentiment = []
-    batch2_diversity = []
+	#Retrieve Second Tweet Batch
+	nextSet = tweets["search_metadata"]["next_results"]
+	nextMaxID = nextSet.split("max_id=")[1].split("&")[0]
+	tweets = twConn.search.tweets(q = twAt, count = twCount, lang = "en", maxid = nextMaxID)
+	batch2_retweets = []
+	batch2_sentiment = []
+	batch2_diversity = []
 
-    print("Second Tweet Batch")
-    for tweet in tweets["statuses"]:
-        retweets, sentiment, diversity = twAnalyze(tweet)
-        batch2_retweets.append(retweets)
-        batch2_sentiment.append(sentiment)
-        batch2_diversity.append(diversity)
+	print("Second Tweet Batch")
+	for tweet in tweets["statuses"]:
+		retweets, sentiment, diversity = twAnalyze(tweet)
+		batch2_retweets.append(retweets)
+		batch2_sentiment.append(sentiment)
+		batch2_diversity.append(diversity)
 
 	#Batch Analysis
-    print "First Batch Statistics:"
-    avg_retweets = sum(batch1_retweets)/len(batch1_retweets)
-    avg_sentiment = sum(batch1_sentiment)/len(batch1_sentiment)
-    avg_diversity = sum(batch1_diversity)/len(batch1_diversity)
-    out = "Avg Retweets\t{}\nAvg Sentiment\t{}\nAvg Diversity\t{}\n"
-    print(out.format(avg_retweets,avg_sentiment,avg_diversity))
-    
-    print "Second Batch Statistics:"
-    avg_retweets = sum(batch2_retweets)/len(batch2_retweets)
-    avg_sentiment = sum(batch2_sentiment)/len(batch2_sentiment)
-    avg_diversity = sum(batch2_diversity)/len(batch2_diversity)
-    out = "Avg Retweets\t{}\nAvg Sentiment\t{}\nAvg Diversity\t{}\n"
-    print(out.format(avg_retweets,avg_sentiment,avg_diversity))
+	print "First Batch Statistics:"
+	avg_retweets = sum(batch1_retweets)/len(batch1_retweets)
+	avg_sentiment = sum(batch1_sentiment)/len(batch1_sentiment)
+	avg_diversity = sum(batch1_diversity)/len(batch1_diversity)
+	out = "Avg Retweets\t{}\nAvg Sentiment\t{}\nAvg Diversity\t{}\n"
+	print(out.format(avg_retweets,avg_sentiment,avg_diversity))
 
-    return
+	print "Second Batch Statistics:"
+	avg_retweets = sum(batch2_retweets)/len(batch2_retweets)
+	avg_sentiment = sum(batch2_sentiment)/len(batch2_sentiment)
+	avg_diversity = sum(batch2_diversity)/len(batch2_diversity)
+	out = "Avg Retweets\t{}\nAvg Sentiment\t{}\nAvg Diversity\t{}\n"
+	print(out.format(avg_retweets,avg_sentiment,avg_diversity))
+
+	return
 
 #=FACEBOOK MINING FUNCTIONS===============================================
 
-#connFacebook - Returns Facebook connection
-def connFacebook(fbOA_TOKEN,fbOA_SECRET,fbCONSUMER_KEY,fbCONSUMER_SECRET):
-	fbConn = 0
-	return fbConn
+def postAnalyze(post, num):
+	text = removeUnicode(post["message"])
+	sentiment = getSentiment(text)
+	diversity = getDiversity(text)
+	out = "Post {}:\nText:\t{}\nSentiment: {}, Lexical diversity: {}\n"
+	print(out.format(num, text, sentiment, diversity))
+	return sentiment, diversity
 
 #mineFacebook - Performs batch mining and analysis
-def mineFacebook(fbConn,fbPage,fbCount):
+def mineFacebook(token,fbPage,fbCount):
+
+	fb = facebook.GraphAPI(token)
+	d_posts = fb.get_connections(fbPage, 'posts')
+	total_sentiment = []
+	total_diversity = []
+
+	posts = 0
+	for i in range(25):
+		curPost = d_posts['data'][i]
+		if curPost['type'] != 'video':
+			posts = posts + 1
+			sentiment, diversity = postAnalyze(curPost, posts)
+
+	total_sentiment.append(sentiment)
+	total_diversity.append(diversity)
+
+	if posts == fbCount:
+		return
+
+	avg_sentiment = sum(total_sentiment)/len(total_sentiment)
+	avg_diversity = sum(total_diversity)/len(total_diversity)
+	out = "Avg Sentiment\t{}\nAvg Diversity\t{}\n"
+	print(out.format(avg_sentiment,avg_diversity))
+
 	return
 
 #=WEBSITE MINING FUNCTIONS===============================================
@@ -219,7 +249,8 @@ def mineWebsite(url,query):
 
 	#Retrieve HTML and Setup Russell
 	html = requests.get(url)
-	print "Latest News Article: " + str(url)
+	print "--Latest Web News Article--"
+	print str(url)
 
 	#Build DOM and List Paragraphs
 	soup = BeautifulSoup(html.text,'html5lib')
@@ -232,45 +263,44 @@ def mineWebsite(url,query):
 
 	#Print Paragraph Summary
 	printSummary(unicode_text,paras)
-		
+
 	#Print Query TF/IDF
 	printTFIDF(unicode_text,query)
-	
+
 	#Print Article Bigrams
 	printBigrams(unicode_text)
-	
+
 	return
 
 #=MAIN==================================================================
 
 def main():
 
-  #Twitter Access Credential Declaration
+	#Twitter Access Credential Declaration
 	twOA_TOKEN = ''
 	twOA_SECRET = ''
 	twCONSUMER_KEY = ''
 	twCONSUMER_SECRET = ''
 
 	#Facebook Access Credential Declaration
-	#fbOA_TOKEN = ''
+	fbTOKEN = ''
 
 	#Mining Targets Declaration
 	twAt = "@spacex"
 	twCount = 25
-	fbPage = ""
-	fbCount = 0
+	fbPage = "NASA"
+	fbCount = 10
 	url = "http://www.spacex.com/news/2017/03/16/echostar-xxiii-mission"
-	query = ["falcon","dragon"]
+	query = ["falcon","dragon","echostar","merlin","launch","orbit","success"]
 
 	#Establish Connection to Twitter and Mine
 	twConn = connTwitter(twOA_TOKEN,twOA_SECRET,twCONSUMER_KEY,twCONSUMER_SECRET)
 	mineTwitter(twConn,twAt,twCount)
 
-	#Establish Connection to Facebook and Mine
-	#fbConn = connFacebook(fbOA_TOKEN,fbOA_SECRET,fbCONSUMER_KEY,fbCONSUMER_SECRET)
-	#mineFacebook(fbConn,fbPage,fbCount)
-
 	#Retrieve Webpage HTML and Analyze
 	mineWebsite(url,query)
+	
+	#Establish Connection to Facebook and Mine
+	mineFacebook(fbTOKEN,fbPage,fbCount)
 
 main()
